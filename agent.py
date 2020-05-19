@@ -93,7 +93,6 @@ def act_on_battle(state):
     best_action, best_score = None, float("-inf")
 
     for action in state.available_actions:
-        print(f"action = {action}")
         state_copy = state.clone()
         state_copy.act(action)
 
