@@ -1,9 +1,12 @@
 import json
+import pathlib
 
 import numpy as np
 from scipy.special import softmax
 
 from src.engine import State, ActionType, Action, Phase
+
+base_path = str(pathlib.Path(__file__).parent.absolute())
 
 PATH_FIRST_MODEL = "models/1st.json"
 PATH_SECOND_MODEL = "models/2nd.json"
@@ -129,7 +132,7 @@ def act_on_draft(network, state):
 
 def load_model(path: str):
     # read the parameters
-    with open(path, "r") as json_file:
+    with open(base_path + "/" + path, "r") as json_file:
         params = json.load(json_file)
 
     network = dict((label, np.array(weights)) for label, weights in params.items())
@@ -145,9 +148,6 @@ def load_model(path: str):
 
 def run():
     network = None
-
-    # count the draft turns
-    turn = 0
 
     while True:
         game_input = read_game_input()
@@ -166,8 +166,6 @@ def run():
         if is_draft_phase:
             state = encode_state(game_input)
             action = act_on_draft(network, state)
-
-            turn += 1
 
             print("PICK", action)
         else:
