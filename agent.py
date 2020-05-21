@@ -1,9 +1,11 @@
 import json
 import pathlib
+import time
 from typing import List
 
 import numpy as np
 from scipy.special import softmax
+from sortedcontainers import SortedDict, SortedList
 
 from src.engine import State, ActionType, Action, Phase
 
@@ -62,62 +64,32 @@ def encode_state(game_input):
     return state.flatten()
 
 
-def eval_state(state):
-    score = 0
-
-    pl = state.current_player
-    op = state.opposing_player
-
-    # check opponent's death
-    if op.health <= 0:
-        score += 1000
-
-    # check own death
-    if pl.health <= 0:
-        score -= 1000
-
-    # health difference
-    score += (pl.health - op.health) * 2
-
-    for pl_lane, op_lane in zip(pl.lanes, op.lanes):
-        # card count
-        score += (len(pl_lane) - len(pl_lane)) * 10
-
-        # card strength
-        score += sum(c.attack + c.defense for c in pl_lane)
-        score -= sum(c.attack + c.defense for c in op_lane)
-
-    return score
-
-
 def act_on_battle(state) -> List[Action]:
-    actions = []
+    start_time = time.process_time()
 
-    while state.winner is None:
-        action = act_greedly(state)
+    state.performed_actions = []
 
-        if action.type == ActionType.PASS:
-            break
+    frontier = SortedList([state])
+    visited = SortedList()
 
-        state.act(action)
-        actions.append(action)
+    while frontier:
+        state = frontier.pop()
+        visited.add(state)
 
-    return actions
+        for action in state.available_actions:
+            state_copy = state.clone()
+            state_copy.act(action)
 
+            state_copy.performed_actions = state.performed_actions + [action]
 
-def act_greedly(state) -> Action:
-    best_action, best_score = None, float("-inf")
+            frontier.add(state_copy)
 
-    for action in state.available_actions:
-        state_copy = state.clone()
-        state_copy.act(action)
+            if time.process_time() - start_time >= 0.15:
+                visited += frontier
 
-        score = eval_state(state_copy)
+                return visited[-1].performed_actions
 
-        if score > best_score:
-            best_action, best_score = action, score
-
-    return best_action
+    return visited[-1].performed_actions
 
 
 def act_on_draft(network, state):

@@ -233,6 +233,12 @@ class Creature(Card):
 
         return cloned_card
 
+    def score(self):
+        return 3 * self.attack + 2 * self.defense \
+               + self.attack * int(self.has_ability('W')) \
+               + 25 * int(self.has_ability('G')) \
+               + 30 * int(self.has_ability('L'))
+
 
 class Item(Card):
     pass
@@ -285,6 +291,8 @@ class State:
         self.players = (Player(PlayerOrder.FIRST), Player(PlayerOrder.SECOND))
         self._current_player = PlayerOrder.FIRST
         self.__available_actions = None
+
+        self._score = None
 
         self.winner = None
 
@@ -365,9 +373,6 @@ class State:
 
             available_actions = summon + attack + use
 
-            if not available_actions:
-                available_actions = [Action(ActionType.PASS)]
-
             self.__available_actions = tuple(available_actions)
 
         return self.__available_actions
@@ -377,12 +382,12 @@ class State:
 
         self._act_on_battle(action)
 
-
         if action.type == ActionType.PASS:
             self._next_turn()
 
             self._new_battle_turn()
 
+        self._score = None
         self.__available_actions = None
 
     def _next_instance_id(self):
@@ -638,6 +643,7 @@ class State:
         cloned_state._current_player = self._current_player
         cloned_state.__available_actions = self.__available_actions
         cloned_state.winner = self.winner
+        cloned_state._score = self._score
         cloned_state.players = tuple([player.clone() for player in self.players])
 
         return cloned_state
@@ -806,6 +812,41 @@ class State:
     def is_ended(self):
         return self.phase == Phase.ENDED
 
+    def __hash__(self):
+        return id(self)
+
+    def __lt__(self, other):
+        return self.score() < other.score()
+
+    def score(self):
+        if self._score is not None:
+            return self._score
+
+        score = 0
+
+        pl = self.current_player
+        op = self.opposing_player
+
+        # check opponent's death
+        if op.health <= 0:
+            score += 100000
+
+        # check own death
+        if pl.health <= 0:
+            score -= 100000
+
+        # health difference
+        score += (pl.health - op.health) * 5
+
+        # card strength
+        for pl_lane, op_lane in zip(pl.lanes, op.lanes):
+            score += sum(c.score() for c in pl_lane)
+            score -= sum(c.score() for c in op_lane)
+
+        self._score = score
+
+        return score
+
     @staticmethod
     def empty_copy():
         class Empty(State):
@@ -816,6 +857,3 @@ class State:
         new_copy.__class__ = State
 
         return new_copy
-
-
-Game = State
