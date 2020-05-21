@@ -1,5 +1,6 @@
 import json
 import pathlib
+from typing import List
 
 import numpy as np
 from scipy.special import softmax
@@ -89,10 +90,22 @@ def eval_state(state):
     return score
 
 
-def act_on_battle(state):
-    if state.phase == Phase.ENDED:
-        return Action(ActionType.PASS)
+def act_on_battle(state) -> List[Action]:
+    actions = []
 
+    while state.winner is None:
+        action = act_greedly(state)
+
+        if action.type == ActionType.PASS:
+            break
+
+        state.act(action)
+        actions.append(action)
+
+    return actions
+
+
+def act_greedly(state) -> Action:
     best_action, best_score = None, float("-inf")
 
     for action in state.available_actions:
@@ -170,17 +183,7 @@ def run():
             print("PICK", action)
         else:
             state = State.from_str(game_input)
-
-            actions = []
-
-            while True:
-                action = act_on_battle(state)
-
-                if action.type == ActionType.PASS:
-                    break
-
-                state.act(action)
-                actions.append(action)
+            actions = act_on_battle(state)
 
             if actions:
                 print(";".join(map(Action.to_native, actions)))
