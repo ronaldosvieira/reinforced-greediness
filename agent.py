@@ -1,13 +1,12 @@
 import json
 import pathlib
 import time
-from typing import List
 
 import numpy as np
 from scipy.special import softmax
-from sortedcontainers import SortedDict, SortedList
+from sortedcontainers import SortedSet
 
-from src.engine import State, ActionType, Action, Phase
+from src.engine import State, Action
 
 base_path = str(pathlib.Path(__file__).parent.absolute())
 
@@ -64,31 +63,83 @@ def encode_state(game_input):
     return state.flatten()
 
 
-def act_on_battle(state) -> List[Action]:
+def eval_creature(self):
+    return 3 * self.attack + 2 * self.defense \
+           + self.attack * int(self.has_ability('W')) \
+           + 25 * int(self.has_ability('G')) \
+           + 30 * int(self.has_ability('L'))
+
+
+def eval_state(self):
+    if self._score is not None:
+        return self._score
+
+    score = 0
+
+    pl = self.current_player
+    op = self.opposing_player
+
+    # check opponent's death
+    if op.health <= 0:
+        score += 100000
+
+    # check own death
+    if pl.health <= 0:
+        score -= 100000
+
+    # health difference
+    score += (pl.health - op.health) * 5
+
+    # card strength
+    for pl_lane, op_lane in zip(pl.lanes, op.lanes):
+        score += sum(eval_creature(c) for c in pl_lane)
+        score -= sum(eval_creature(c) for c in op_lane)
+
+    self._score = score
+
+    return score
+
+
+def act_on_battle(state):
+    # start timer
     start_time = time.process_time()
 
+    # no actions currently done in the root state
     state.performed_actions = []
 
-    frontier = SortedList([state])
-    visited = SortedList()
+    # initialize open and closed sets
+    unvisited = SortedSet([state], key=eval_state)
+    visited = SortedSet(key=eval_state)
 
-    while frontier:
-        state = frontier.pop()
+    # while there are nodes unvisited
+    while unvisited:
+        # get best unvisited node
+        state = unvisited.pop()
+
+        # and mark it visited
         visited.add(state)
 
+        # discover all neighbors
         for action in state.available_actions:
+            # act on a copy of the current state
             state_copy = state.clone()
             state_copy.act(action)
 
+            # register the performed action
             state_copy.performed_actions = state.performed_actions + [action]
 
-            frontier.add(state_copy)
+            # add this neighbor to the unvisited set
+            unvisited.add(state_copy)
 
+            # if we reached 150 ms, stop the search
             if time.process_time() - start_time >= 0.15:
-                visited += frontier
+                # consider all unexplored as explored
+                visited.update(unvisited)
 
+                # return the actions needed to reach the best node we saw
                 return visited[-1].performed_actions
 
+    # return the actions needed to reach the best node we saw
     return visited[-1].performed_actions
 
 
