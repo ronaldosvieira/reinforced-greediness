@@ -101,6 +101,8 @@ class Player:
         cloned_player.next_rune = self.next_rune
         cloned_player.bonus_draw = self.bonus_draw
 
+        cloned_player.last_drawn = self.last_drawn
+
         cloned_player.deck = [card.make_copy(card.instance_id)
                               for card in self.deck]
         cloned_player.hand = [card.make_copy(card.instance_id)
