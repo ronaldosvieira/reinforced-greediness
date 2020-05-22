@@ -1,5 +1,6 @@
 import json
 import pathlib
+import sys
 import time
 
 import numpy as np
@@ -101,43 +102,63 @@ def act_on_battle(state):
     # start timer
     start_time = time.process_time()
 
-    # no actions currently done in the root state
-    state.performed_actions = []
+    # initialize score dict
+    scores = dict({(): eval_state(state)})
 
     # initialize open and closed sets
-    unvisited = SortedSet([state], key=eval_state)
-    visited = SortedSet(key=eval_state)
+    unvisited = SortedSet([()], key=scores.__getitem__)
+    visited = SortedSet(key=scores.__getitem__)
 
     # while there are nodes unvisited
     while unvisited:
+        # roll back to starting state
+        state.undo_all()
+
         # get best unvisited node
-        state = unvisited.pop()
+        actions = unvisited.pop()
+
+        # roll out actions to get into the intended state
+        for action in actions:
+            state.act(action)
 
         # and mark it visited
-        visited.add(state)
+        visited.add(actions)
 
         # discover all neighbors
         for action in state.available_actions:
-            # act on a copy of the current state
-            state_copy = state.clone()
-            state_copy.act(action)
+            # do the respective action
+            state.act(action)
 
-            # register the performed action
-            state_copy.performed_actions = state.performed_actions + [action]
+            # calculate score
+            scores[(*actions, action)] = eval_state(state)
 
             # add this neighbor to the unvisited set
-            unvisited.add(state_copy)
+            unvisited.add((*actions, action))
+
+            # roll back action
+            state.undo()
 
             # if we reached 150 ms, stop the search
-            if time.process_time() - start_time >= 0.15:
+            time_elapsed = time.process_time() - start_time
+
+            if time_elapsed >= 0.15:
                 # consider all unexplored as explored
                 visited.update(unvisited)
 
+                # print total elapsed time to stderr
+                print("%.3f ms" % (time_elapsed * 1000), file=sys.stderr)
+
                 # return the actions needed to reach the best node we saw
-                return visited[-1].performed_actions
+                return visited[-1]
+
+    # recalculate elapsed time just in case
+    time_elapsed = time.process_time() - start_time
+
+    # print total elapsed time to stderr
+    print("%.3f ms" % (time_elapsed * 1000), file=sys.stderr)
 
     # return the actions needed to reach the best node we saw
-    return visited[-1].performed_actions
+    return visited[-1]
 
 
 def act_on_draft(network, state):
