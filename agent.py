@@ -63,21 +63,18 @@ def encode_state(game_input):
     return state.flatten()
 
 
-def eval_creature(self):
-    return 3 * self.attack + 2 * self.defense \
-           + self.attack * int(self.has_ability('W')) \
-           + 25 * int(self.has_ability('G')) \
-           + 30 * int(self.has_ability('L'))
+def eval_creature(creature):
+    return 3 * creature.attack + 2 * creature.defense \
+           + creature.attack * int(creature.has_ability('W')) \
+           + 25 * int(creature.has_ability('G')) \
+           + 30 * int(creature.has_ability('L'))
 
 
-def eval_state(self):
-    if self._score is not None:
-        return self._score
-
+def eval_state(state):
     score = 0
 
-    pl = self.current_player
-    op = self.opposing_player
+    pl = state.current_player
+    op = state.opposing_player
 
     # check opponent's death
     if op.health <= 0:
@@ -95,7 +92,7 @@ def eval_state(self):
         score += sum(eval_creature(c) for c in pl_lane)
         score -= sum(eval_creature(c) for c in op_lane)
 
-    self._score = score
+    state._score = score
 
     return score
 
