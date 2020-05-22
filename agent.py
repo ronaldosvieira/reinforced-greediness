@@ -103,7 +103,8 @@ def act_on_battle(state):
     start_time = time.process_time()
 
     # initialize score dict
-    scores = dict({(): eval_state(state)})
+    # maximize state score primarily and minimize amount of actions secondarily
+    scores = dict({(): (eval_state(state), 0)})
 
     # initialize open and closed sets
     unvisited = SortedSet([()], key=scores.__getitem__)
@@ -129,8 +130,8 @@ def act_on_battle(state):
             # do the respective action
             state.act(action)
 
-            # calculate score
-            scores[(*actions, action)] = eval_state(state)
+            # calculate score and negative amount of actions
+            scores[(*actions, action)] = eval_state(state), - (len(actions) + 1)
 
             # add this neighbor to the unvisited set
             unvisited.add((*actions, action))
