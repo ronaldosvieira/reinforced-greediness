@@ -199,6 +199,7 @@ class Creature(Card):
         self.is_dead = False
         self.can_attack = False
         self.has_attacked_this_turn = False
+        self.summon_counter = None
 
     def remove_ability(self, ability: str):
         self.keywords.discard(ability)
@@ -229,6 +230,7 @@ class Creature(Card):
     def make_copy(self, instance_id=None) -> 'Card':
         cloned_card = super().make_copy(instance_id)
 
+        cloned_card.summon_counter = self.summon_counter
         cloned_card.is_dead = self.is_dead
         cloned_card.can_attack = self.can_attack
         cloned_card.has_attacked_this_turn = self.has_attacked_this_turn
@@ -284,6 +286,7 @@ class Action:
 class State:
     def __init__(self):
         self.instance_counter = 0
+        self.summon_counter = 0
 
         self.phase = Phase.BATTLE
         self.turn = 1
@@ -526,6 +529,9 @@ class State:
         current_player.hand.remove(origin)
 
         origin.can_attack = False
+        origin.summon_counter = self.summon_counter
+
+        self.summon_counter += 1
 
         current_player.lanes[target].append(origin)
 
@@ -638,6 +644,7 @@ class State:
         cloned_state = State.empty_copy()
 
         cloned_state.instance_counter = self.instance_counter
+        cloned_state.summon_counter = self.summon_counter
         cloned_state.phase = self.phase
         cloned_state.turn = self.turn
         cloned_state._current_player = self._current_player
@@ -692,6 +699,8 @@ class State:
             except ValueError:
                 return value
 
+        summon_counter = 0
+
         type_class_dict = {0: Creature, 1: GreenItem, 2: RedItem, 3: BlueItem}
 
         for card in cards:
@@ -704,6 +713,11 @@ class State:
             card = type_class(number, "", card_type, cost, attack, defense,
                               abilities, player_hp, enemy_hp, card_draw,
                               "", instance_id)
+
+            if isinstance(card, Creature):
+                card.summon_counter = summon_counter
+                summon_counter += 1
+                card.can_attack = True
 
             if location == 0:
                 p.hand.append(card)
