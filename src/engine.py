@@ -1,4 +1,5 @@
 import sys
+from collections import defaultdict
 from operator import attrgetter
 
 from typing import Tuple
@@ -81,14 +82,18 @@ class Player:
 
             self.hand.append(self.deck.pop())
 
-    def damage(self, amount: int) -> int:
+    def damage(self, amount: int):
         self.health -= amount
+
+        runes_lost = 0
 
         while self.health <= self.next_rune and self.next_rune > 0:
             self.next_rune -= 5
             self.bonus_draw += 1
 
-        return amount
+            runes_lost += 1
+
+        return amount, runes_lost
 
     def clone(self):
         cloned_player = Player.empty_copy()
@@ -295,7 +300,7 @@ class State:
         self._current_player = PlayerOrder.FIRST
         self.__available_actions = None
 
-        self._score = None
+        self.history = []
 
         self.winner = None
 
@@ -383,14 +388,13 @@ class State:
     def act(self, action: Action):
         self.was_last_action_invalid = False
 
-        self._act_on_battle(action)
-
         if action.type == ActionType.PASS:
             self._next_turn()
 
             self._new_battle_turn()
+        else:
+            self._act_on_battle(action)
 
-        self._score = None
         self.__available_actions = None
 
     def _next_instance_id(self):
@@ -485,19 +489,17 @@ class State:
                 if isinstance(action.target, int):
                     target = Lane(target)
 
-                self._do_summon(origin, target)
+                changes = self._do_summon(origin, target)
             elif action.type == ActionType.ATTACK:
                 if isinstance(action.target, int):
                     target = self._find_card(target)
 
-                self._do_attack(origin, target)
+                changes = self._do_attack(origin, target)
             elif action.type == ActionType.USE:
                 if isinstance(action.target, int):
                     target = self._find_card(target)
 
-                self._do_use(origin, target)
-            elif action.type == ActionType.PASS:
-                pass
+                changes = self._do_use(origin, target)
             else:
                 raise MalformedActionError("Invalid action type")
 
@@ -509,11 +511,15 @@ class State:
                 FullLaneError, InvalidCardError):
             self.was_last_action_invalid = True
 
+            return
+
         for player in self.players:
             for lane in player.lanes:
                 for creature in lane:
                     if creature.is_dead:
                         lane.remove(creature)
+
+                        changes["destroyed"].append((creature, lane))
 
         if self.players[PlayerOrder.FIRST].health <= 0:
             self.phase = Phase.ENDED
@@ -522,7 +528,11 @@ class State:
             self.phase = Phase.ENDED
             self.winner = PlayerOrder.FIRST
 
+        self.history.append(changes)
+
     def _do_summon(self, origin, target):
+        changes = defaultdict(list)
+
         current_player = self.current_player
         opposing_player = self.opposing_player
 
@@ -534,19 +544,35 @@ class State:
         self.summon_counter += 1
 
         current_player.lanes[target].append(origin)
+        changes["placed"].append((origin, current_player.hand, current_player.lanes[target]))
 
         current_player.bonus_draw += origin.card_draw
-        current_player.damage(-origin.player_hp)
-        opposing_player.damage(-origin.enemy_hp)
+        changes["bonus_draw"].append((current_player, origin.card_draw))
+
+        damage_received, runes_lost = current_player.damage(-origin.player_hp)
+        changes["damage_dealt"].append((current_player, -origin.player_hp))
+        changes["runes_lost"].append((current_player, runes_lost))
+
+        damage_dealt, runes_lost = opposing_player.damage(-origin.enemy_hp)
+        changes["damage_dealt"].append((opposing_player, -origin.enemy_hp))
+        changes["runes_lost"].append((opposing_player, runes_lost))
 
         current_player.mana -= origin.cost
+        changes["mana_spent"].append((current_player, origin.cost))
+
+        return changes
 
     def _do_attack(self, origin, target):
+        changes = defaultdict(list)
+
         current_player = self.current_player
         opposing_player = self.opposing_player
 
         if target is None:
-            damage_dealt = opposing_player.damage(origin.attack)
+            damage_dealt, runes_lost = opposing_player.damage(origin.attack)
+
+            changes["damage_dealt"].append((opposing_player, damage_dealt))
+            changes["runes_lost"].append((opposing_player, runes_lost))
 
         elif isinstance(target, Creature):
             target_defense = target.defense
@@ -555,20 +581,29 @@ class State:
                 damage_dealt = target.damage(
                     origin.attack,
                     lethal=origin.has_ability('L'))
+
+                changes["damage_dealt"].append((target, damage_dealt))
             except WardShieldError:
                 damage_dealt = 0
 
+                changes["stat_change"].append((target, "ability-", {'W'}))
+
             try:
-                origin.damage(
+                damage_received = origin.damage(
                     target.attack,
                     lethal=target.has_ability('L'))
+
+                changes["damage_dealt"].append((origin, damage_received))
             except WardShieldError:
-                pass
+                changes["stat_change"].append((origin, "ability-", {'W'}))
 
             excess_damage = damage_dealt - target_defense
 
             if 'B' in origin.keywords and excess_damage > 0:
-                opposing_player.damage(excess_damage)
+                _, runes_lost = opposing_player.damage(excess_damage)
+
+                changes["damage_dealt"].append((opposing_player, excess_damage))
+                changes["runes_lost"].append((opposing_player, runes_lost))
         else:
             raise MalformedActionError("Target is not a creature or "
                                        "a player")
@@ -576,16 +611,30 @@ class State:
         if 'D' in origin.keywords:
             current_player.health += damage_dealt
 
+            changes["damage_dealt"].append((current_player, -damage_dealt))
+
         origin.has_attacked_this_turn = True
 
+        return changes
+
     def _do_use(self, origin, target):
+        changes = defaultdict(list)
+
         current_player = self.current_player
         opposing_player = self.opposing_player
 
         current_player.hand.remove(origin)
+        changes["destroyed"].append((origin, current_player.hand))
 
         if isinstance(origin, GreenItem):
-            target.attack = max(0, target.attack + origin.attack)
+            new_attack = max(0, target.attack + origin.attack)
+            keyword_gain = origin.keywords.difference(target.keywords)
+
+            changes["stat_change"].append((target, "attack", new_attack - target.attack))
+            changes["stat_change"].append((target, "defense", origin.defense))
+            changes["stat_change"].append((target, "ability+", keyword_gain))
+
+            target.attack = new_attack
             target.defense += origin.defense
             target.keywords = target.keywords.union(origin.keywords)
 
@@ -593,56 +642,99 @@ class State:
                 target.is_dead = True
 
             current_player.bonus_draw += origin.card_draw
-            current_player.damage(-origin.player_hp)
-            opposing_player.damage(-origin.enemy_hp)
+            changes["bonus_draw"].append((current_player, origin.card_draw))
+
+            _, runes_lost = current_player.damage(-origin.player_hp)
+            changes["damage_dealt"].append((current_player, -origin.player_hp))
+            changes["runes_lost"].append((current_player, runes_lost))
+
+            _, runes_lost = opposing_player.damage(-origin.enemy_hp)
+            changes["damage_dealt"].append((opposing_player, -origin.enemy_hp))
+            changes["runes_lost"].append((opposing_player, runes_lost))
 
         elif isinstance(origin, RedItem):
-            target.attack = max(0, target.attack + origin.attack)
+            new_attack = max(0, target.attack + origin.attack)
+            keyword_loss = origin.keywords.intersection(target.keywords)
+
+            changes["stat_change"].append((target, "attack", new_attack - target.attack))
+            changes["stat_change"].append((target, "ability-", keyword_loss))
+
+            target.attack = new_attack
             target.keywords = target.keywords.difference(origin.keywords)
 
             try:
-                target.damage(-origin.defense)
+                damage_dealt = target.damage(-origin.defense)
+
+                changes["damage_dealt"].append((target, damage_dealt))
             except WardShieldError:
-                pass
+                changes["stat_change"].append((target, "ability-", {'W'}))
 
             if target.defense <= 0:
                 target.is_dead = True
 
             current_player.bonus_draw += origin.card_draw
-            current_player.damage(-origin.player_hp)
-            opposing_player.damage(-origin.enemy_hp)
+            changes["bonus_draw"].append((current_player, origin.card_draw))
+
+            _, runes_lost = current_player.damage(-origin.player_hp)
+            changes["damage_dealt"].append((current_player, -origin.player_hp))
+            changes["runes_lost"].append((current_player, runes_lost))
+
+            _, runes_lost = opposing_player.damage(-origin.enemy_hp)
+            changes["damage_dealt"].append((opposing_player, -origin.enemy_hp))
+            changes["runes_lost"].append((opposing_player, runes_lost))
 
         elif isinstance(origin, BlueItem):
             if isinstance(target, Creature):
-                target.attack = max(0, target.attack + origin.attack)
+                new_attack = max(0, target.attack + origin.attack)
+                keyword_loss = origin.keywords.intersection(target.keywords)
+
+                changes["stat_change"].append((target, "attack", new_attack - target.attack))
+                changes["stat_change"].append((target, "ability-", keyword_loss))
+
+                target.attack = new_attack
                 target.keywords = target.keywords.difference(origin.keywords)
 
                 try:
-                    target.damage(-origin.defense)
+                    damage_dealt = target.damage(-origin.defense)
+
+                    changes["damage_dealt"].append((target, damage_dealt))
                 except WardShieldError:
-                    pass
+                    changes["stat_change"].append((target, "ability-", {'W'}))
 
                 if target.defense <= 0:
                     target.is_dead = True
 
             elif target is None:
-                opposing_player.damage(-origin.defense)
+                damage_dealt = opposing_player.damage(-origin.defense)
+
+                changes["damage_dealt"].append((opposing_player, damage_dealt))
             else:
                 raise MalformedActionError("Invalid target")
 
             current_player.bonus_draw += origin.card_draw
-            current_player.damage(-origin.player_hp)
-            opposing_player.damage(-origin.enemy_hp)
+            changes["bonus_draw"].append((current_player, origin.card_draw))
+
+            _, runes_lost = current_player.damage(-origin.player_hp)
+            changes["damage_dealt"].append((current_player, -origin.player_hp))
+            changes["runes_lost"].append((current_player, runes_lost))
+
+            _, runes_lost = opposing_player.damage(-origin.enemy_hp)
+            changes["damage_dealt"].append((opposing_player, -origin.enemy_hp))
+            changes["runes_lost"].append((opposing_player, runes_lost))
 
         else:
             error = "Card being used is not an item"
             raise MalformedActionError(error)
 
         current_player.mana -= origin.cost
+        changes["mana_spent"].append((current_player, origin.cost))
+
+        return changes
 
     def clone(self) -> 'State':
         cloned_state = State.empty_copy()
 
+        cloned_state.history = self.history
         cloned_state.instance_counter = self.instance_counter
         cloned_state.summon_counter = self.summon_counter
         cloned_state.phase = self.phase
@@ -650,7 +742,6 @@ class State:
         cloned_state._current_player = self._current_player
         cloned_state.__available_actions = self.__available_actions
         cloned_state.winner = self.winner
-        cloned_state._score = self._score
         cloned_state.players = tuple([player.clone() for player in self.players])
 
         return cloned_state
