@@ -757,7 +757,7 @@ class State:
             encoding += f"{a.resolved_origin.id} {a.type.name} " \
                 f"{a.origin} {target_id}\n"
 
-        cards = p.hand + \
+        cards = sorted(p.hand, key=attrgetter('instance_id')) + \
             sorted(p.lanes[0] + p.lanes[1], key=attrgetter('summon_counter')) + \
             sorted(o.lanes[0] + o.lanes[1], key=attrgetter('summon_counter'))
 
