@@ -460,6 +460,12 @@ class State:
         except ValueError:
             pass
 
+        try:
+            for creature in changes["attacked"]:
+                creature.has_attacked_this_turn = False
+        except ValueError:
+            pass
+
     def undo_all(self):
         while self.history:
             self.undo()
@@ -681,6 +687,7 @@ class State:
             changes["damage_dealt"].append((current_player, -damage_dealt))
 
         origin.has_attacked_this_turn = True
+        changes["attacked"].append(origin)
 
         return changes
 
@@ -772,9 +779,10 @@ class State:
                     target.is_dead = True
 
             elif target is None:
-                damage_dealt = opposing_player.damage(-origin.defense)
+                damage_dealt, runes_lost = opposing_player.damage(-origin.defense)
 
                 changes["damage_dealt"].append((opposing_player, damage_dealt))
+                changes["runes_lost"].append((opposing_player, runes_lost))
             else:
                 raise MalformedActionError("Invalid target")
 
