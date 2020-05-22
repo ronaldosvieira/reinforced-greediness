@@ -267,6 +267,10 @@ class Action:
     def __repr__(self):
         return f"{self.type} {self.origin} {self.target}"
 
+    def __hash__(self):
+        return hash((ord(self.type.value[0]), ord(self.type.value[1]),
+                     self.origin, self.target))
+
     def to_native(self):
         if self.type == ActionType.PASS:
             return "PASS"
