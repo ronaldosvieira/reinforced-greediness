@@ -136,24 +136,28 @@ def act_on_battle(state):
             # add this neighbor to the unvisited set
             unvisited.add((*actions, action))
 
-            # if we reached 150 ms, stop the search
+            # calculate time elapsed
             time_elapsed = time.process_time() - start_time
 
+            # if we reached 140 ms, stop the search
             if time_elapsed >= 0.14:
                 # consider all unexplored as explored
                 visited.update(unvisited)
 
-                # print total elapsed time to stderr
-                print("%.3f ms" % (time_elapsed * 1000), file=sys.stderr)
-
                 # return the actions needed to reach the best node we saw
                 best_actions = visited[-1]
 
+                # if any attack on the opponent is available, why not?
                 for remaining_action in state.available_actions:
-                    if action.type == ActionType.ATTACK and action.target is None:
+                    if remaining_action.type == ActionType.ATTACK \
+                            and remaining_action.target is None:
                         best_actions = (*best_actions, remaining_action)
 
+                # print total elapsed time to stderr
+                print("%.3f ms*" % (time_elapsed * 1000), file=sys.stderr)
+
                 return best_actions
+
             # roll back action
             state.undo()
 
