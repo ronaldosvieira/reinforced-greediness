@@ -205,7 +205,7 @@ def run():
 
             print("PICK", action)
         else:
-            state = State.from_str(game_input)
+            state = State.from_native_input(game_input)
             actions = act_on_battle(state)
 
             if actions:

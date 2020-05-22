@@ -645,7 +645,7 @@ class State:
         # return pickle.loads(pickle.dumps(self, -1))
 
     @staticmethod
-    def from_str(str_state):
+    def from_native_input(str_state):
         if isinstance(str_state, str):
             str_state = str_state.split("\n")
 
