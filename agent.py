@@ -139,8 +139,8 @@ def act_on_battle(state):
             # calculate time elapsed
             time_elapsed = time.process_time() - start_time
 
-            # if we reached 140 ms, stop the search
-            if time_elapsed >= 0.14:
+            # if we reached 160 ms, stop the search
+            if time_elapsed >= 0.16:
                 # consider all unexplored as explored
                 visited.update(unvisited)
 
