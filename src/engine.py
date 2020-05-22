@@ -397,6 +397,73 @@ class State:
 
         self.__available_actions = None
 
+    def undo(self):
+        changes = self.history.pop()
+
+        try:
+            for target, damage in changes["damage_dealt"]:
+                if isinstance(target, Player):
+                    target.health += damage
+                elif isinstance(target, Creature):
+                    target.defense += damage
+        except ValueError:
+            pass
+
+        try:
+            for target, hand, lane in changes["placed"]:
+                lane.remove(target)
+                hand.append(target)
+
+                target.summon_counter = None
+                self.summon_counter -= 1
+        except ValueError:
+            pass
+
+        try:
+            for target, mana in changes["mana_spent"]:
+                target.mana += mana
+        except ValueError:
+            pass
+
+        try:
+            for target, bonus_draw in changes["bonus_draw"]:
+                target.bonus_draw -= bonus_draw
+        except ValueError:
+            pass
+
+        try:
+            for target, stat, change in changes["stat_change"]:
+                if stat == "attack":
+                    target.attack -= change
+                elif stat == "defense":
+                    target.defense -= change
+                elif stat == "ability+":
+                    target.keywords = target.keywords.difference(change)
+                elif stat == "ability-":
+                    target.keywords = target.keywords.union(change)
+        except ValueError:
+            pass
+
+        try:
+            for card, origin in changes["destroyed"]:
+                origin.append(card)
+
+                if isinstance(card, Creature):
+                    card.is_dead = False
+        except ValueError:
+            pass
+
+        try:
+            for player, runes_lost in changes["runes_lost"]:
+                player.next_rune += 5 * runes_lost
+                player.bonus_draw -= 1 * runes_lost
+        except ValueError:
+            pass
+
+    def undo_all(self):
+        while self.history:
+            self.undo()
+
     def _next_instance_id(self):
         self.instance_counter += 1
 
