@@ -7,7 +7,7 @@ import numpy as np
 from scipy.special import softmax
 from sortedcontainers import SortedSet
 
-from src.engine import State, Action
+from src.engine import State, Action, ActionType
 
 base_path = str(pathlib.Path(__file__).parent.absolute())
 
@@ -135,13 +135,10 @@ def act_on_battle(state):
             # add this neighbor to the unvisited set
             unvisited.add((*actions, action))
 
-            # roll back action
-            state.undo()
-
             # if we reached 150 ms, stop the search
             time_elapsed = time.process_time() - start_time
 
-            if time_elapsed >= 0.15:
+            if time_elapsed >= 0.14:
                 # consider all unexplored as explored
                 visited.update(unvisited)
 
@@ -149,7 +146,15 @@ def act_on_battle(state):
                 print("%.3f ms" % (time_elapsed * 1000), file=sys.stderr)
 
                 # return the actions needed to reach the best node we saw
-                return visited[-1]
+                best_actions = visited[-1]
+
+                for remaining_action in state.available_actions:
+                    if action.type == ActionType.ATTACK and action.target is None:
+                        best_actions = (*best_actions, remaining_action)
+
+                return best_actions
+            # roll back action
+            state.undo()
 
     # recalculate elapsed time just in case
     time_elapsed = time.process_time() - start_time
