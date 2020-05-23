@@ -106,13 +106,13 @@ def eval_state(state):
     return score
 
 
-def act_on_battle(state):
+def act_on_battle(state, eval_function=eval_state):
     # start timer
     start_time = time.process_time()
 
     # initialize score dict
     # maximize state score primarily and minimize amount of actions secondarily
-    scores = dict({(): (eval_state(state), 0)})
+    scores = dict({(): (eval_function(state), 0)})
 
     # initialize open and closed sets
     unvisited = SortedSet([()], key=scores.__getitem__)
@@ -139,7 +139,7 @@ def act_on_battle(state):
             state.act(action)
 
             # calculate score and negative amount of actions
-            scores[(*actions, action)] = eval_state(state), - (len(actions) + 1)
+            scores[(*actions, action)] = eval_function(state), - (len(actions) + 1)
 
             # add this neighbor to the unvisited set
             unvisited.add((*actions, action))
