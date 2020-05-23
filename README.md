@@ -15,7 +15,7 @@ python3 agent.py
 
 ## Draft strategy
 We use neural networks to choose cards. They are trained by reinforcement learning in a competitive self-play setting, 
-and a separate network is used when playing as first player and second player. This is part of Ronaldo's master thesis.
+and a separate network is used when playing as first player and second player. This is part of Ronaldo's master's thesis.
 
 ## Playing strategy
 We find the best combination of actions with a best-first search that considers only the current turn. A simplified 
