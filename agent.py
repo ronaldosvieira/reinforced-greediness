@@ -65,13 +65,13 @@ def encode_state(game_input):
 
 
 def eval_creature(creature):
-    return 0.9313717510801794 * creature.attack \
-           + 0.7538882512507131 * creature.defense \
-           + 0.9229492460528769 * creature.has_ability('B') \
-           + 0.4518785620898421 * creature.has_ability('D') \
-           + 0.9527561197326869 * creature.has_ability('G') \
-           + 0.37345362235160473 * creature.has_ability('L') \
-           + 0.21604932087968387 * creature.has_ability('W')
+    return 0.9903654503260438 * creature.attack \
+           + 0.8807415488815061 * creature.defense \
+           + 0.2653632695271666 * creature.has_ability('B') \
+           + 0.5596083779334705 * creature.has_ability('D') \
+           + 0.07114298711816602 * creature.has_ability('G') \
+           + 0.14339516451120193 * creature.has_ability('L') \
+           + 0.2955693950317263 * creature.has_ability('W')
 
 
 def eval_state(state):
@@ -89,19 +89,19 @@ def eval_state(state):
         score -= 100000
 
     # health
-    score += 0.8702336552456786 * pl.health
-    score -= 0.8702336552456786 * op.health
+    score += 0.015603063115694038 * pl.health
+    score -= 0.015603063115694038 * op.health
 
     # hand
-    score += 0.6079552584997157 * len(pl.hand)
-    score -= 0.6079552584997157 * len(op.hand)
+    score += 0.05022772028105327 * len(pl.hand)
+    score -= 0.05022772028105327 * len(op.hand)
 
     # card strength
     for pl_lane, op_lane in zip(pl.lanes, op.lanes):
-        lane_score = sum(0.9889937854164377 * eval_creature(c) for c in pl_lane)
-        lane_score -= sum(0.9889937854164377 * eval_creature(c) for c in op_lane)
+        lane_score = sum(0.9721034503143529 * eval_creature(c) for c in pl_lane)
+        lane_score -= sum(0.9721034503143529 * eval_creature(c) for c in op_lane)
 
-        score += 0.7635484367413533 * lane_score
+        score += 0.5381958101147939 * lane_score
 
     return score
 
