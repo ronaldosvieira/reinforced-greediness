@@ -1,5 +1,5 @@
 # unnamed-locm-bot
-AI player for Legends of Code and Magic submitted to the [IEEE CEC 2020's Strategy Card Game AI Competition](https://jakubkowalski.tech/Projects/LOCM/CEC20). Made by Ronaldo Vieira, Luiz Chaimowicz and Anderson Tavares from Universidade Federal de Minas Gerais and Universidade Federal do Rio Grande do Sul.
+Legends of Code and Magic bot submitted to the [IEEE CEC 2020's Strategy Card Game AI Competition](https://jakubkowalski.tech/Projects/LOCM/CEC20). Made by Ronaldo Vieira, Luiz Chaimowicz and Anderson Tavares from Universidade Federal de Minas Gerais and Universidade Federal do Rio Grande do Sul.
 
 ## Installation
 ```
