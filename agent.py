@@ -199,8 +199,10 @@ def load_model(path: str):
     with open(base_path + "/" + path, "r") as json_file:
         params = json.load(json_file)
 
+    # transform to numpy arrays
     network = dict((label, np.array(weights)) for label, weights in params.items())
 
+    # load activation function for hidden layers
     network["act_fun"] = dict(
         tanh=np.tanh,
         relu=lambda x: np.maximum(x, 0),
@@ -214,6 +216,7 @@ def run():
     network = None
 
     while True:
+        # get the input for the turn
         game_input = read_game_input()
 
         # if mana is zero then it is draft phase
