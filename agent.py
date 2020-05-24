@@ -140,7 +140,7 @@ def act_on_battle(state, eval_function=eval_state):
             unvisited.add((*actions, action))
 
             # calculate time elapsed
-            time_elapsed = time.process_time() - start_time
+            time_elapsed = time.perf_counter() - start_time
 
             # if we reached 175 ms, stop the search
             # 25 ms should be enough to finish
@@ -209,7 +209,7 @@ if __name__ == '__main__':
 
     while True:
         # start timer
-        start_time = time.process_time()
+        start_time = time.perf_counter()
 
         # get the input for the turn
         game_input = read_game_input()
@@ -230,7 +230,7 @@ if __name__ == '__main__':
             action = act_on_draft(network, state)
 
             # print total elapsed time to stderr
-            print("%.3f ms" % ((time.process_time() - start_time) * 1000), file=sys.stderr)
+            print("%.3f ms" % ((time.perf_counter() - start_time) * 1000), file=sys.stderr)
 
             print("PICK", action)
         else:
@@ -238,7 +238,7 @@ if __name__ == '__main__':
             actions = act_on_battle(state)
 
             # print total elapsed time to stderr
-            print("%.3f ms" % ((time.process_time() - start_time) * 1000), file=sys.stderr)
+            print("%.3f ms" % ((time.perf_counter() - start_time) * 1000), file=sys.stderr)
 
             if actions:
                 print(";".join(map(Action.to_native, actions)))
