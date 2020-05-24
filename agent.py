@@ -14,7 +14,6 @@ base_path = str(pathlib.Path(__file__).parent.absolute())
 PATH_FIRST_MODEL = "models/1st.json"
 PATH_SECOND_MODEL = "models/2nd.json"
 
-# start timer
 start_time = None
 
 
