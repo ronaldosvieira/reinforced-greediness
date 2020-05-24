@@ -115,8 +115,7 @@ def act_on_battle(state, eval_function=eval_state):
     scores = dict({(): (eval_function(state), 0)})
 
     # initialize open and closed sets
-    unvisited = SortedSet([()], key=scores.__getitem__)
-    visited = SortedSet(key=scores.__getitem__)
+    unvisited = SortedSet([()], key=scores.get)
 
     # while there are nodes unvisited
     while unvisited:
@@ -129,9 +128,6 @@ def act_on_battle(state, eval_function=eval_state):
         # roll out actions to get into the intended state
         for action in actions:
             state.act(action)
-
-        # and mark it visited
-        visited.add(actions)
 
         # discover all neighbors
         for action in state.available_actions:
@@ -147,15 +143,13 @@ def act_on_battle(state, eval_function=eval_state):
             # calculate time elapsed
             time_elapsed = time.process_time() - start_time
 
-            # if we reached 160 ms, stop the search
-            if time_elapsed >= 0.16:
-                # consider all unexplored as explored
-                visited.update(unvisited)
-
+            # if we reached 175 ms, stop the search
+            # 25 ms should be enough to finish
+            if time_elapsed >= 0.175:
                 # return the actions needed to reach the best node we saw
-                best_actions = visited[-1]
+                best_actions = sorted(scores, key=scores.get)[-1]
 
-                # if any attack on the opponent is available, why not?
+                # if any direct attack is available, why not?
                 for remaining_action in state.available_actions:
                     if remaining_action.type == ActionType.ATTACK \
                             and remaining_action.target is None:
@@ -167,7 +161,7 @@ def act_on_battle(state, eval_function=eval_state):
             state.undo()
 
     # return the actions needed to reach the best node we saw
-    return visited[-1]
+    return sorted(scores, key=scores.get)[-1]
 
 
 def act_on_draft(network, state):
