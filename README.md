@@ -1,16 +1,18 @@
-# unnamed-locm-bot
-Legends of Code and Magic bot submitted to the [IEEE CEC 2020's Strategy Card Game AI Competition](https://jakubkowalski.tech/Projects/LOCM/CEC20). Made by Ronaldo Vieira, Luiz Chaimowicz and Anderson Tavares from Universidade Federal de Minas Gerais and Universidade Federal do Rio Grande do Sul.
+# reinforced-greediness
 
-## Installation
+>*"Dermatoplastic shepard scratches its reinforced greediness by formulating without shock."* — random text on the web
+
+This is a bot for Legends of Code and Magic submitted to the [IEEE CEC 2020's Strategy Card Game AI Competition](https://jakubkowalski.tech/Projects/LOCM/CEC20). Made by Ronaldo Vieira, Luiz Chaimowicz and Anderson Tavares from Universidade Federal de Minas Gerais and Universidade Federal do Rio Grande do Sul.
+
+## Dependencies
+Our bot requires Python 3.6+ and the numpy, scipy and sortedcontainers libraries. They can by installed by:
 ```
 pip install numpy scipy sortedcontainers
-git clone https://github.com/ronaldosvieira/unnamed-locm-bot.git
-cd unnamed-locm-bot
 ```
 
 ## Usage
 ```
-python3 agent.py
+python agent.py
 ```
 
 ## Draft strategy
