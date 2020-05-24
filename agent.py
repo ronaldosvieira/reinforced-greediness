@@ -14,6 +14,9 @@ base_path = str(pathlib.Path(__file__).parent.absolute())
 PATH_FIRST_MODEL = "models/1st.json"
 PATH_SECOND_MODEL = "models/2nd.json"
 
+# start timer
+start_time = None
+
 
 def read_game_input():
     # read players info
@@ -107,9 +110,6 @@ def eval_state(state):
 
 
 def act_on_battle(state, eval_function=eval_state):
-    # start timer
-    start_time = time.process_time()
-
     # initialize score dict
     # maximize state score primarily and minimize amount of actions secondarily
     scores = dict({(): (eval_function(state), 0)})
@@ -161,19 +161,10 @@ def act_on_battle(state, eval_function=eval_state):
                             and remaining_action.target is None:
                         best_actions = (*best_actions, remaining_action)
 
-                # print total elapsed time to stderr
-                print("%.3f ms*" % (time_elapsed * 1000), file=sys.stderr)
-
                 return best_actions
 
             # roll back action
             state.undo()
-
-    # recalculate elapsed time just in case
-    time_elapsed = time.process_time() - start_time
-
-    # print total elapsed time to stderr
-    print("%.3f ms" % (time_elapsed * 1000), file=sys.stderr)
 
     # return the actions needed to reach the best node we saw
     return visited[-1]
@@ -220,10 +211,13 @@ def load_model(path: str):
     return network
 
 
-def run():
+if __name__ == '__main__':
     network = None
 
     while True:
+        # start timer
+        start_time = time.process_time()
+
         # get the input for the turn
         game_input = read_game_input()
 
@@ -242,16 +236,18 @@ def run():
             state = encode_state(game_input)
             action = act_on_draft(network, state)
 
+            # print total elapsed time to stderr
+            print("%.3f ms" % ((time.process_time() - start_time) * 1000), file=sys.stderr)
+
             print("PICK", action)
         else:
             state = State.from_native_input(game_input)
             actions = act_on_battle(state)
 
+            # print total elapsed time to stderr
+            print("%.3f ms" % ((time.process_time() - start_time) * 1000), file=sys.stderr)
+
             if actions:
                 print(";".join(map(Action.to_native, actions)))
             else:
                 print("PASS")
-
-
-if __name__ == '__main__':
-    run()
