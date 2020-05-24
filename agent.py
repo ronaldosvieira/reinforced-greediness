@@ -146,8 +146,8 @@ def act_on_battle(state, eval_function=eval_state):
             # if we reached 175 ms, stop the search
             # 25 ms should be enough to finish
             if time_elapsed >= 0.175:
-                # return the actions needed to reach the best node we saw
-                best_actions = sorted(scores, key=scores.get)[-1]
+                # return the best actions so far
+                best_actions = max(scores, key=scores.get)
 
                 # if any direct attack is available, why not?
                 for remaining_action in state.available_actions:
@@ -161,7 +161,7 @@ def act_on_battle(state, eval_function=eval_state):
             state.undo()
 
     # return the actions needed to reach the best node we saw
-    return sorted(scores, key=scores.get)[-1]
+    return max(scores, key=scores.get)
 
 
 def act_on_draft(network, state):
