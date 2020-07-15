@@ -16,11 +16,8 @@ python agent.py
 ```
 
 ## Draft strategy
-We use neural networks to choose cards. They are trained by reinforcement learning in a competitive self-play setting, 
+We use neural networks to choose cards. They are trained by reinforcement learning in a self-play setting, 
 and a separate network is used when playing as first player and second player. This is part of Ronaldo's master's thesis.
 
 ## Playing strategy
-We find the best combination of actions with a best-first search that considers only the current turn. A simplified 
-version of the forward model available in the [gym-locm](https://github.com/ronaldosvieira/gym-locm) project is used. 
-Our state evaluation function is formed by a linear combination of hand-made features, with coefficients found via 
-Bayesian optimization.
+We find the best combination of actions with a best-first search on the current turn, using a simplified version of the forward model available in the [gym-locm](https://github.com/ronaldosvieira/gym-locm) project. Our state evaluation function is formed by a linear combination of hand-made features, with coefficients found via Bayesian optimization.
